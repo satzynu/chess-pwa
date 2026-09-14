@@ -1,0 +1,48 @@
+// Run: PUPPETEER_PATH=/path/to/puppeteer CHROME_PATH=/path/to/chrome node smoke-test.cjs [base-url]
+const assert = require('node:assert/strict');
+const puppeteer = require(process.env.PUPPETEER_PATH || 'puppeteer');
+const base = process.argv[2] || 'http://127.0.0.1:8766/';
+(async () => {
+  const browser = await puppeteer.launch({ executablePath:process.env.CHROME_PATH, headless:true, args:['--disable-gpu','--disable-background-timer-throttling','--disable-renderer-backgrounding','--allow-loopback-in-peer-connection','--disable-features=WebRtcHideLocalIpsWithMdns'] });
+  const errors = [];
+  async function page() {
+    const context = await browser.createBrowserContext();
+    const p = await context.newPage();
+    p.on('pageerror', e => errors.push(e.message)); p.on('dialog', d => d.accept());
+    await p.setViewport({width:1440,height:1000}); await p.goto(base); await p.waitForSelector('.piece');
+    return p;
+  }
+  const move = async (p, from, to) => { await p.click(`[data-square="${from}"]`); await p.click(`[data-square="${to}"]`); };
+  try {
+    const p = await page();
+    assert.equal(await p.$$eval('.piece', els => els.length),32);
+    assert.equal(await p.$eval('[data-square="7"]', e => e.classList.contains('light')),true);
+    await p.click('[data-level="easy"]');
+    await p.focus('[data-square="12"]'); await p.keyboard.press('Enter'); await p.keyboard.press('ArrowUp'); await p.keyboard.press('ArrowUp'); await p.keyboard.press('Enter');
+    await p.waitForFunction(() => document.querySelector('#board').getAttribute('aria-busy') === 'false' && document.querySelector('#history').textContent.includes('e5'));
+    const journal = await p.$eval('#history', e => e.textContent);
+    await p.reload(); await p.waitForSelector('.piece'); assert.equal(await p.$eval('#history',e=>e.textContent),journal);
+    await p.click('#undo'); assert.equal(await p.$$eval('.move-row',e=>e.length),0);
+    for (const width of [390,320]) { await p.setViewport({width,height:844,isMobile:true,hasTouch:true}); assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth <= innerWidth),true); }
+    await p.evaluate(()=>navigator.serviceWorker.ready); await p.reload(); await p.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));
+    await p.setOfflineMode(true); await p.reload(); await p.waitForSelector('.piece'); await move(p,12,28);
+    await p.waitForFunction(()=>document.querySelector('#history').textContent.includes('e5'));
+    console.log('PASS computer, keyboard, undo, restore, mobile, offline AI');
+    await p.setOfflineMode(false);
+    const host = await page(); await host.click('#friend-mode'); await host.click('#create-room');
+    await host.waitForFunction(()=>!document.querySelector('#invite-label').hidden,{timeout:35000});
+    const invite = await host.$eval('#invite',e=>e.value);
+    const guest = await page(); await guest.goto(invite);
+    await host.waitForFunction(()=>document.querySelector('#room-status').textContent.startsWith('Connected'),{timeout:45000});
+    await guest.waitForFunction(()=>document.querySelector('#room-status').textContent.startsWith('Connected'),{timeout:45000});
+    assert.equal(await guest.$eval('.square',e=>e.dataset.square),'7');
+    await move(guest,52,36); assert.equal(await guest.$$eval('.move-row',e=>e.length),0);
+    await move(host,12,28); await guest.waitForFunction(()=>document.querySelector('#history').textContent.includes('e4'));
+    await move(guest,52,36); await host.waitForFunction(()=>document.querySelector('#history').textContent.includes('e5'));
+    assert.equal(await host.$eval('#history',e=>e.textContent),await guest.$eval('#history',e=>e.textContent));
+    assert.equal(await host.$eval('#undo',e=>e.disabled),true);
+    await guest.close(); await host.waitForFunction(()=>document.querySelector('#room-status').textContent.includes('disconnected'));
+    console.log('PASS real PeerJS signaling, two contexts, board flip, turn gating, move sync, disconnect');
+    assert.deepEqual(errors,[]); console.log('PASS no page errors');
+  } finally { await browser.close(); }
+})().catch(error => { console.error(error); process.exitCode=1; });
