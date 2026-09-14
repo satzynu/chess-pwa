@@ -17,6 +17,8 @@ const base = process.argv[2] || 'http://127.0.0.1:8766/';
     const p = await page();
     assert.equal(await p.$$eval('.piece', els => els.length),32);
     assert.equal(await p.$eval('[data-square="7"]', e => e.classList.contains('light')),true);
+    assert.equal(await p.$eval('#sync-room',e=>e.textContent),'Reconnect');
+    assert.equal(await p.$eval('#board',e=>getComputedStyle(e).transform),'none');
     await p.click('[data-level="easy"]');
     await p.focus('[data-square="12"]'); await p.keyboard.press('Enter'); await p.keyboard.press('ArrowUp'); await p.keyboard.press('ArrowUp'); await p.keyboard.press('Enter');
     await p.waitForFunction(() => document.querySelector('#board').getAttribute('aria-busy') === 'false' && document.querySelector('#history').textContent.includes('e5'));
@@ -40,6 +42,20 @@ const base = process.argv[2] || 'http://127.0.0.1:8766/';
     await p.reload(); await p.waitForSelector('.piece');
     assert.match(await p.$eval('#status',e=>e.textContent), /Checkmate/);
     await move(p,12,28); assert.equal(await p.$$eval('.move-row',e=>e.length),2);
+    assert.equal(await p.$('.confetti'),null); // Restoring a finished game must not replay celebration.
+    for (const reduced of [false,true]) {
+      await p.emulateMediaFeatures([{name:'prefers-reduced-motion',value:reduced ? 'reduce' : 'no-preference'}]);
+      await p.evaluate(() => localStorage.setItem('quiet-chess-v1', JSON.stringify({level:'easy',moves:[[12,28],[52,36],[3,39],[57,42],[5,26],[62,45]].map(([from,to])=>({from,to,promotion:''}))})));
+      await p.reload(); await p.waitForSelector('.piece'); await move(p,39,53);
+      await p.waitForFunction(()=>document.querySelector('#status').textContent.includes('Checkmate'));
+      assert.equal(await p.$$eval('.confetti i',els=>els.length),reduced ? 0 : 48);
+      if (!reduced) {
+        assert.equal(await p.$eval('.confetti',e=>getComputedStyle(e).pointerEvents),'none');
+        await p.waitForSelector('.confetti',{hidden:true,timeout:5000});
+        await p.click('[data-level="medium"]'); assert.equal(await p.$('.confetti'),null);
+      }
+    }
+    console.log('PASS finish confetti, cleanup, no repeat, and reduced motion');
     console.log('PASS corrupt save recovery, promotion, terminal game lock');
     const host = await page(); await host.click('#friend-mode'); await host.click('#create-room');
     await host.waitForFunction(()=>!document.querySelector('#invite-label').hidden,{timeout:35000});

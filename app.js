@@ -8,6 +8,7 @@ const roomKey = id => 'quiet-chess-room-v1:' + id;
 const validRoomId = id => /^quiet-[a-f0-9-]{36}$/.test(id || '');
 let roomSession = null;
 let game, validator, moves = [], level = 'medium', mode = 'computer', color = 'white';
+let wasFinished = null;
 let selected = null, targets = [], focusSquare = 12, worker = null, busy = false;
 let peer = null, channel = null, connected = false, roomTimer = null;
 const board = $('board');
@@ -56,7 +57,26 @@ function disconnect() {
 }
 function resetBoard() { stopAI(); selected = null; targets = []; game.reset(); moves = []; }
 
+function celebrateFinish() {
+  const finished = terminal();
+  const celebrate = finished && wasFinished === false;
+  wasFinished = finished;
+  if (!finished) document.querySelector('.confetti')?.remove();
+  if (!celebrate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.querySelector('.confetti')?.remove();
+  const confetti = document.createElement('div');
+  confetti.className = 'confetti'; confetti.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 48; i++) {
+    const piece = document.createElement('i');
+    piece.style.cssText = `left:${Math.random() * 100}%;background:${['#c9db9a','#f0eee3','#e4b76b','#b6ced7'][i % 4]};--drift:${Math.random() * 240 - 120}px;--spin:${Math.random() * 900 - 450}deg;animation-delay:${Math.random() * .5}s`;
+    confetti.append(piece);
+  }
+  document.body.append(confetti);
+  setTimeout(() => confetti.remove(), 3500);
+}
+
 function render() {
+  celebrateFinish();
   const pieces = game.getBoard(), turn = game.getTurn(), status = game.getStatus();
   const hadFocus = board.contains(document.activeElement);
   board.replaceChildren();
@@ -325,7 +345,7 @@ function connectRoom() {
     if (retryAt && Date.now() >= retryAt) { connectRoom(); return; }
     if (current.disconnected && !current.destroyed) { current.reconnect(); return; }
     if (channel?.open) {
-      if (Date.now() - (lastAck || openedAt) > 12000) pause('Waiting for sync confirmation · game saved. Use Reconnect / sync if this persists.');
+      if (Date.now() - (lastAck || openedAt) > 12000) pause('Waiting for sync confirmation · game saved. Use Reconnect if this persists.');
       sendState();
     } else if (channel && Date.now() - openedAt > 12000) {
       const old = channel; channel = null; old.close(); join();

@@ -1,4 +1,4 @@
-const CACHE = 'quiet-chess-v2';
+const CACHE = 'quiet-chess-v3';
 const FILES = ['./', './index.html', './style.css', './app.js', './engine.js', './ai-worker.js', './pieces.woff2', './peerjs.min.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png'];
 self.addEventListener('install', event => event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(FILES))));
 // Wait for old tabs to close before activating a new version; never replace a live game.
