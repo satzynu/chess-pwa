@@ -5,6 +5,9 @@
 /* A beveled rim adds depth without tilting or changing the 2D playing surface. */
 #board{border-width:8px;border-color:#56644c #263322 #172016 #48573e;box-shadow:0 1px 0 1px #7a886344,0 7px 0 #11190f,0 9px 0 1px #090f0a,0 20px 34px #0005}
 @media(max-width:760px){#board{border-width:6px;box-shadow:0 1px 0 1px #7a886344,0 5px 0 #11190f,0 7px 0 1px #090f0a,0 14px 24px #0004}}
+.game-result{display:flex;align-items:center;gap:16px;margin:22px 0 6px;padding:18px 22px;border:1px solid #829361;border-radius:12px;background:linear-gradient(120deg,#38482e,#29322b);box-shadow:0 5px 14px #0002}
+.game-result strong{display:block;font:30px/1.2 Georgia,serif;color:var(--accent)}.game-result div>span{display:block;margin-top:5px;color:var(--muted);font-size:12px}.result-symbol{font:40px Pieces;color:var(--accent)}
+.game-result.draw{background:#2a3338;border-color:#657e86}.game-result.draw strong,.game-result.draw .result-symbol{color:#c0d6de}.game-result.draw .result-symbol{font:26px Georgia,serif;white-space:nowrap}
 .confetti{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:900}
 .confetti i{position:absolute;top:-16px;width:8px;height:13px;border-radius:2px;animation:confetti-fall 2.7s ease-in forwards}
 @keyframes confetti-fall{to{transform:translate(var(--drift),110vh) rotate(var(--spin));opacity:0}}

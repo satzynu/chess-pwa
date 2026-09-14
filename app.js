@@ -58,10 +58,18 @@ function disconnect() {
 function resetBoard() { stopAI(); selected = null; targets = []; game.reset(); moves = []; }
 
 function celebrateFinish() {
-  const finished = terminal();
-  const celebrate = finished && wasFinished === false;
+  const finished = terminal(), won = game.getStatus() === 'checkmate';
+  const celebrate = finished && wasFinished === false && won;
+  const result = $('game-result');
+  result.hidden = !finished;
+  if (finished && wasFinished !== true) {
+    result.classList.toggle('draw', !won);
+    $('result-title').textContent = won ? `${game.getTurn() === 'white' ? 'Black' : 'White'} wins` : 'Draw';
+    $('result-detail').textContent = won ? 'Checkmate. Well played.' : game.getStatus() === 'stalemate' ? 'Stalemate · honours shared.' : 'A balanced finish · honours shared.';
+    $('result-symbol').textContent = won ? '♛' : '½–½';
+  }
   wasFinished = finished;
-  if (!finished) document.querySelector('.confetti')?.remove();
+  if (!finished || !won) document.querySelector('.confetti')?.remove();
   if (!celebrate || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   document.querySelector('.confetti')?.remove();
   const confetti = document.createElement('div');

@@ -23,6 +23,10 @@
       <section class="play-area" aria-label="Chess game">
         <div class="player"><span class="avatar" aria-hidden="true">♟</span><div><strong>The computer</strong><span id="opponent-level">Medium · Black pieces</span></div><span id="computer-indicator" class="turn-indicator" aria-label="Computer's turn" hidden></span><span id="captured-black" class="captured" aria-label="Pieces captured by the computer"></span></div>
         <div id="board" role="group" aria-label="Chessboard. Use arrow keys to navigate, Enter to select a piece or move, Escape to clear selection." aria-busy="true"></div>
+        <div id="game-result" class="game-result" role="status" aria-live="polite" aria-atomic="true" hidden>
+          <span id="result-symbol" class="result-symbol" aria-hidden="true"></span>
+          <div><strong id="result-title"></strong><span id="result-detail"></span></div>
+        </div>
         <div class="player"><span class="avatar human" aria-hidden="true">♙</span><div><strong>You</strong><span>White pieces</span></div><span id="human-indicator" class="turn-indicator" aria-label="Your turn" hidden></span><span id="captured-white" class="captured" aria-label="Pieces captured by you"></span></div>
       </section>
       <aside class="panel" aria-label="Game controls and moves">

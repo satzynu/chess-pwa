@@ -41,6 +41,8 @@ const base = process.argv[2] || 'http://127.0.0.1:8766/';
     await p.evaluate(() => localStorage.setItem('quiet-chess-v1', JSON.stringify({level:'easy',moves:[[13,21],[52,36],[14,30],[59,31]].map(([from,to])=>({from,to,promotion:''}))})));
     await p.reload(); await p.waitForSelector('.piece');
     assert.match(await p.$eval('#status',e=>e.textContent), /Checkmate/);
+    assert.equal(await p.$eval('#result-title',e=>e.textContent),'Black wins');
+    assert.equal(await p.$eval('#game-result',e=>e.hidden),false);
     await move(p,12,28); assert.equal(await p.$$eval('.move-row',e=>e.length),2);
     assert.equal(await p.$('.confetti'),null); // Restoring a finished game must not replay celebration.
     for (const reduced of [false,true]) {
@@ -48,6 +50,7 @@ const base = process.argv[2] || 'http://127.0.0.1:8766/';
       await p.evaluate(() => localStorage.setItem('quiet-chess-v1', JSON.stringify({level:'easy',moves:[[12,28],[52,36],[3,39],[57,42],[5,26],[62,45]].map(([from,to])=>({from,to,promotion:''}))})));
       await p.reload(); await p.waitForSelector('.piece'); await move(p,39,53);
       await p.waitForFunction(()=>document.querySelector('#status').textContent.includes('Checkmate'));
+      assert.equal(await p.$eval('#result-title',e=>e.textContent),'White wins');
       assert.equal(await p.$$eval('.confetti i',els=>els.length),reduced ? 0 : 48);
       if (!reduced) {
         assert.equal(await p.$eval('.confetti',e=>getComputedStyle(e).pointerEvents),'none');
@@ -56,6 +59,21 @@ const base = process.argv[2] || 'http://127.0.0.1:8766/';
       }
     }
     console.log('PASS finish confetti, cleanup, no repeat, and reduced motion');
+    await p.emulateMediaFeatures([{name:'prefers-reduced-motion',value:'no-preference'}]);
+    await p.evaluate(() => {
+      const sq = s => 'abcdefgh'.indexOf(s[0]) + (+s[1]-1)*8;
+      const moves = ['e2e3','a7a5','d1h5','a8a6','h5a5','h7h5','a5c7','a6h6','h2h4','f7f6','c7d7','e8f7','d7b7','d8d3','b7b8','d3h7','b8c8','f7g6'].map(s=>({from:sq(s.slice(0,2)),to:sq(s.slice(2)),promotion:''}));
+      localStorage.setItem('quiet-chess-v1',JSON.stringify({level:'easy',moves}));
+    });
+    await p.reload(); await p.waitForSelector('.piece'); await move(p,58,44);
+    assert.equal(await p.$eval('#result-title',e=>e.textContent),'Draw');
+    assert.match(await p.$eval('#result-detail',e=>e.textContent),/Stalemate/);
+    assert.equal(await p.$eval('#game-result',e=>e.classList.contains('draw')),true);
+    assert.equal(await p.$('.confetti'),null);
+    await p.reload(); await p.waitForSelector('.piece');
+    assert.equal(await p.$eval('#result-title',e=>e.textContent),'Draw');
+    await p.click('#undo'); assert.equal(await p.$eval('#game-result',e=>e.hidden),true);
+    console.log('PASS White/Black win banners, quiet draw banner, restore and undo');
     console.log('PASS corrupt save recovery, promotion, terminal game lock');
     const host = await page(); await host.click('#friend-mode'); await host.click('#create-room');
     await host.waitForFunction(()=>!document.querySelector('#invite-label').hidden,{timeout:35000});
