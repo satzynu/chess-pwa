@@ -45,14 +45,50 @@ const base = process.argv[2] || 'http://127.0.0.1:8766/';
     await host.waitForFunction(()=>!document.querySelector('#invite-label').hidden,{timeout:35000});
     const invite = await host.$eval('#invite',e=>e.value);
     const guest = await page(); await guest.goto(invite);
-    await host.waitForFunction(()=>document.querySelector('#room-status').textContent.startsWith('Connected'),{timeout:45000});
-    await guest.waitForFunction(()=>document.querySelector('#room-status').textContent.startsWith('Connected'),{timeout:45000});
+    const synced = p => p.waitForFunction(()=>document.querySelector('#room-status').textContent.includes('boards synced'),{timeout:45000});
+    await synced(host); await synced(guest);
     assert.equal(await guest.$eval('.square',e=>e.dataset.square),'7');
     await move(guest,52,36); assert.equal(await guest.$$eval('.move-row',e=>e.length),0);
     await move(host,12,28); await guest.waitForFunction(()=>document.querySelector('#history').textContent.includes('e4'));
-    await move(guest,52,36); await host.waitForFunction(()=>document.querySelector('#history').textContent.includes('e5'));
+    await synced(guest); await move(guest,52,36); await host.waitForFunction(()=>document.querySelector('#history').textContent.includes('e5'));
     assert.equal(await host.$eval('#history',e=>e.textContent),await guest.$eval('#history',e=>e.textContent));
     assert.equal(await host.$eval('#undo',e=>e.disabled),true);
+    const before = await host.$eval('#history',e=>e.textContent);
+    await guest.reload(); await synced(guest); await synced(host);
+    assert.equal(await guest.$eval('#history',e=>e.textContent),before);
+    await host.reload(); await synced(host); await synced(guest);
+    assert.equal(await host.$eval('#history',e=>e.textContent),before);
+    await Promise.all([host.reload(),guest.reload()]); await synced(host); await synced(guest);
+    assert.equal(await guest.$eval('#history',e=>e.textContent),before);
+    await host.click('#sync-room'); await synced(host); await synced(guest);
+    // Simulate a missed persisted move: shorten the guest's history, then refresh.
+    await guest.evaluate(()=>{const id=new URLSearchParams(location.hash.slice(1)).get('room');const key='quiet-chess-room-v1:'+id;const s=JSON.parse(localStorage.getItem(key));s.moves.pop();localStorage.setItem(key,JSON.stringify(s));});
+    await guest.goto('about:blank');
+    await guest.goto(invite); await synced(guest); await synced(host);
+    assert.equal(await guest.$eval('#history',e=>e.textContent),before);
+    await move(host,6,21); await guest.waitForFunction(()=>document.querySelector('#history').textContent.includes('Nf3'));
+    // A lost live update is recovered by the periodic state exchange, without reload.
+    await synced(host); await synced(guest);
+    await guest.evaluate(() => {
+      const send = RTCDataChannel.prototype.send; let dropped = false;
+      RTCDataChannel.prototype.send = function(data) {
+        if (!dropped && typeof data === 'string' && data.includes('"type":"state"')) { dropped = true; return; }
+        return send.call(this,data);
+      };
+    });
+    await move(guest,57,42); await host.waitForFunction(()=>document.querySelector('#history').textContent.includes('Nc6'));
+    assert.equal(await host.$eval('#history',e=>e.textContent),await guest.$eval('#history',e=>e.textContent));
+    console.log('PASS dropped live update recovered without refresh');
+    console.log('PASS guest/host/simultaneous refresh, same room, manual reconnect, stale-history recovery');
+    // Divergent legal histories must not replace either player's saved game.
+    const hostBeforeConflict = await host.$eval('#history',e=>e.textContent);
+    await guest.evaluate(()=>{const id=new URLSearchParams(location.hash.slice(1)).get('room');const key='quiet-chess-room-v1:'+id;const s=JSON.parse(localStorage.getItem(key));s.moves=[{from:11,to:27,promotion:''}];localStorage.setItem(key,JSON.stringify(s));});
+    await guest.reload();
+    await host.waitForFunction(()=>document.querySelector('#room-status').textContent.includes('Sync conflict'),{timeout:45000});
+    await guest.waitForFunction(()=>document.querySelector('#room-status').textContent.includes('Sync conflict'),{timeout:45000});
+    assert.equal(await host.$eval('#history',e=>e.textContent),hostBeforeConflict);
+    assert.match(await guest.$eval('#history',e=>e.textContent),/d4/);
+    console.log('PASS conflict preserves both histories and pauses play');
     await guest.close(); await host.waitForFunction(()=>document.querySelector('#room-status').textContent.includes('disconnected'));
     console.log('PASS real PeerJS signaling, two contexts, board flip, turn gating, move sync, disconnect');
     assert.deepEqual(errors,[]); console.log('PASS no page errors');

@@ -29,7 +29,13 @@
         <div class="intro"><span class="eyebrow">YOUR DAILY PAUSE</span><h1>Make your<br>next move.</h1><p>No rush. No ratings. Just you and the board.</p></div>
         <div class="status-box"><span id="status-dot" class="status-dot"></span><div><strong id="status" role="status" aria-live="polite">Setting up the board…</strong><span id="hint">The pieces will be ready in a moment.</span></div></div>
         <fieldset><legend>Who’s across the board?</legend><div class="segments"><button id="computer-mode" aria-pressed="true">Computer</button><button id="friend-mode" aria-pressed="false">A friend</button></div></fieldset>
-        <div id="friend-controls" hidden><p id="room-status" role="status">Create a room and invite a friend.</p><button id="create-room" class="primary">Create invite link</button><label id="invite-label" hidden>Send this private invite<input id="invite" readonly aria-label="Friend invite link"><button id="copy-invite">Copy link</button></label><p class="fine-print">Keep both tabs open. Anyone with the link can join. Direct connections may fail on restricted networks. No accounts or ratings.</p></div>
+        <div id="friend-controls" hidden>
+          <p id="room-status" role="status">Create a room and invite a friend.</p>
+          <button id="create-room" class="primary">Create invite link</button>
+          <button id="sync-room" disabled>Reconnect / sync</button>
+          <label id="invite-label" hidden>Send this private invite<input id="invite" readonly aria-label="Friend invite link"><button id="copy-invite">Copy link</button></label>
+          <p class="fine-print">Refresh keeps your game in this browser. Rejoin with the same link; moves sync when both players are online. Keep one tab per player. Anyone with the link can claim the guest seat first. Restricted networks may prevent connections.</p>
+        </div>
         <fieldset id="difficulty"><legend>Choose your challenge</legend><div class="segments"><button data-level="easy" aria-pressed="false">Easy</button><button data-level="medium" aria-pressed="true">Medium</button><button data-level="hard" aria-pressed="false">Hard</button></div></fieldset>
         <div class="history-heading"><h2>Move journal</h2><span id="move-count">0 moves</span></div>
         <div id="history" tabindex="0" role="region" aria-label="Move journal"><p class="empty">Every game starts with a possibility.<br><span>Pick a piece to begin.</span></p></div>

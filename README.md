@@ -13,7 +13,11 @@ A small, static chess PWA. No build step, account, or application database.
 
 GitHub Pages serves the files; it does not run multiplayer servers. PeerJS 1.5.5 uses its public signaling service and default ICE/STUN/TURN configuration to establish a WebRTC data channel. These external services see connection metadata; peers may learn each other's network addresses. No audio/video permissions are requested. Anyone with the unguessable invite link can take the guest seat; this is not identity authentication or an anti-cheat system.
 
-Keep both tabs open. Friend games are live-only: refresh, disconnect, or closing a tab requires a **new invite and new game**. Download PGN before leaving. There are no accounts, saved online rooms, automatic reconnect, ratings, or matchmaking. Restricted networks and public-service outages may prevent a connection; the app reports failure rather than silently allowing unsynchronized play. Owned signaling/TURN and server-side room persistence are the next step if this trial needs production reliability.
+Friend games save each player's room, color, seat token, and moves in their own browser. **Refresh or reopen the same invite link to resume**, or use **Reconnect / sync**. Both players must be online to synchronize and continue. The guest seat is reserved to its original browser token after the first join; keep one tab per player. Clearing browser storage or using a different browser loses that seat identity (there is no account recovery).
+
+Peers compare validated move histories on connection and every three seconds. A shorter matching history catches up to the longer one; conflicting histories pause play and preserve both saves. Moves wait for peer confirmation, and stalled connections pause rather than permitting continued independent play. Automatic reconnect retries while the room is open. Storage is local, not a cloud backup: download PGN for a portable copy.
+
+There are no accounts, hosted game history, ratings, or matchmaking. Restricted networks and public-service outages may still prevent connections; refresh cannot bypass those. Owned signaling/TURN and server-side persistence remain the next step for production reliability. Games played in the original release were not persisted and cannot be recovered by this update.
 
 Computer games are saved only in this browser under `quiet-chess-v1`. Friend games never overwrite that save.
 
@@ -35,7 +39,7 @@ CHROME_PATH=/path/to/chrome \
 node smoke-test.cjs http://127.0.0.1:8766/
 ```
 
-The check uses isolated browser contexts and actual public PeerJS signaling. It tests AI, keyboard play, undo, reload restoration, mobile overflow, offline AI, invitation joining, turn gating, board orientation, move synchronization, and disconnect handling. It requires internet access for the friend-mode section. A successful same-machine test does not prove connectivity between every network pair.
+The check uses isolated browser contexts and actual public PeerJS signaling. It tests AI, keyboard play, undo, reload restoration, promotion, mobile overflow, offline AI, friend invitations, orientation, turn gating, host/guest/simultaneous refresh, manual reconnect, stale-history recovery, a dropped live update, conflict preservation, and disconnect handling. It requires internet access for the friend-mode section. A successful same-machine test does not prove connectivity between every network pair.
 
 ## Publish and update
 
